@@ -10,9 +10,9 @@ inspired by reading compiler papers because I didn't know much about compilers
 and was curious.  Up to that point I'd never really known anything about
 compilers at all, I'd been on the operating system track instead as an
 undergraduate (although I didn't finish a computer science major, it wasn't
-because I didn't have enough computer science credits).  In hindsight, reading
-those papers and things may have been a poor decision, but I guess it passed the
-time between interviews.
+because I didn't have enough computer science credits, I got a different degree
+instead).  In hindsight, reading those papers and things may have been a poor
+decision, but I guess it passed the time between interviews.
 
 Anyway, I did learn some interesting (to me) things about language design in the
 process, not that the result is likely useful for anyone else.  So far it hasn't
