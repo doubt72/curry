@@ -28,7 +28,7 @@ how to do things (not *always* the best way) as I went, and didn't go back to
 clean everything up.
 
 Why Curry?  Because Curry is delicious (not saying which is best, even Japanese
-curry has Coco Ichi, but we all know that Indian is best.  I give you Raj Majal
+curry has Coco Ichi, but we all know that Indian is best.  I give you Raj Mahal
 in 東京 as proof).  Also, there is no currying in this langauge.  It's not even
 possible, technically speaking.  Clear?  Clear.
 
