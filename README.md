@@ -32,8 +32,9 @@ curry has Coco Ichi, but we all know that Indian is best.  I give you Raj Majal
 in 東京 as proof).  Also, there is no currying in this langauge.  It's not even
 possible, technically speaking.  Clear?  Clear.
 
-Also, it has code so "beautiful" that will make you `.cry`  Sorry.  (Not
-sorry.)
+Also, it has code so "beautiful" that will make you `.cry`
+
+Sorry.  (Not sorry.)
 
 ## Example
 
@@ -61,25 +62,25 @@ Curry is strongly typed, but type is implicit.
 
 #### Scalar types:
 
-* Atom: `true`, `false`
-* Integer: 64-bit integer
-* Float: 64-bit IEEE blah blah.  Don't worry about it, it's got a dot in it.
-  Sorry European readers
-* String: UTF-8 string; length primitive returns number of codepoints, not
-  bytes.  Double-quotes are used for literals
+* **Atom**: `true`, `false`
+* **Integer**: 64-bit integer
+* **Float**: 64-bit IEEE blah blah.  Don't worry about it, it's got a dot in it.
+  Sorry European readers.
+* **String**: UTF-8 string; length primitive returns number of codepoints, not
+  bytes.  Double-quotes are used for literals.
 
 Literals examples: atom: `true`, int: `0`, float: `0.0`,
 string: `"0"` (so far, so simple).
 
 #### Other types:
 
-* List: lists are internally represented as S-expressions.  I kinda got Lisp all
-  over my language.  Can't seem to get the stains out.  It got everywhere except
-  the places it's not.
-* Function: functions are a first-class type. Then again, there aren't any other
-  kinds of types, so they're just a type, I guess.  Functions take a single
-  argument (which must be a list).
-* Exception: used for flow control, since the language is an iterative
+* **List**: lists are internally represented as S-expressions.  I kinda got Lisp
+  all over my language.  Can't seem to get the stains out.  It got everywhere
+  except the places it's not.
+* **Function**: functions are a first-class type. Then again, there aren't any
+  other kinds of types, so they're just a type, I guess.  Functions take a
+  single argument (which must be a list).
+* **Exception**: used for flow control, since the language is an iterative
   functional language (um), the only flow is the sequence of expressions in a
   block, and the only flow control is the exception, which terminates the block
   (or the program) if uncaught. Return is a special type of exception that that
@@ -88,13 +89,13 @@ string: `"0"` (so far, so simple).
 As an aside, I don't know that anyone has ever used exceptions as the sole way
 to do control flow in a language before, but then, I don't actually know all
 that much about language design, so I wouldn't, would I.  My lack of knowledge
-my also explain the deep inner "beauty" of this language.
+may also explain the deep inner "beauty" of this language.
 
 Anyway, here's a literal example of list: `[1 2 3]`.  There aren't any literals
 of exceptions, and an anonymous identity function could look like this (it's not
 *exactly* an identity function, though, because well, reasons.  Identity
 functions aren't exactly, well, you know, can only pass lists, but this *looks*
-like an identity function):
+like an identity function, oh, never mind, this is an anonymous function):
 
 ```
 :car[_];;
@@ -115,11 +116,11 @@ inside other function definitions (in which case they are scoped to the
 function).  They may or may not have an id (if not, they're anonymous, in which
 case they're lost to the sands of time if not returned/the last expression in a
 function block or in a list passed to another function).  They are followed by a
-colon (`:`) and a function block, and terminated by a semicolon (`;`) as a
-normal expression is (which is why functions in a block are always followed by
-at least two semicolons, one for the final expression in the function block in
-the definition, one for the definition itself.  Including in the main program,
-which is just another block).
+colon (`:`) and a function block, and also terminated by a semicolon (`;`) as
+any normal expression is (which is why functions in a block are always followed
+by at least two semicolons, one for the final expression in the function block
+in the definition, one for the definition itself.  Including in the main
+program, which is just another block).
 
 There are no variables, only defined functions and `_` which is the list
 (parameter) passed to the function.
@@ -133,7 +134,7 @@ not definition time.
 
 The following characters have special meaning: `:` `;` `[` `]` `"` `#`
 
-Anything else can be used in an ID.
+Anything else can be used in a function name.
 
 `#` is used for comments, to the end of a line.
 
@@ -152,10 +153,10 @@ Have a BNF:
 <atom> ::= 'true' | 'false'
 ```
 
-For brevity's sake, not defining ids int, float, string, or whitespace.  Strings
-are double-quote delimited (currently there are no escapes), whitespace is
-whitespace, and numeric types are whatever parse as such, ids are everything
-else (even weird shit like `0z_f` or whatever).
+For brevity's sake, not defining ids int, float, string, or whitespace here.
+Strings are double-quote delimited (currently there are no escapes), whitespace
+is whitespace, and numeric types are whatever Rust can successfully parse as
+such, ids are everything else (even weird shit like `0z_f` or whatever).
 
 ## Primitives:
 
@@ -168,7 +169,8 @@ else (even weird shit like `0z_f` or whatever).
 ### Comparisons:
 
 * Numeric types only: `<`, `>`
-* `=`: any dissimilar types are not considered equal
+* `=`: any dissimilar types are not considered equal, comparisons of functions
+  is always false
 
 ### String Operations:
 
@@ -196,8 +198,9 @@ else (even weird shit like `0z_f` or whatever).
   passed to that function)
 * `?`: if `car[_]` is true, returns `car[cdr[_]]`, else `car[car[cdr[_]]]`
 * `raise`: raises an `error` exception with `car[_]` as payload
-* `catch`: catches an exception and returns list `[<type> <payload> <stack>]`,
-  if passed non-exception expression, returns `["ok" car[_]]`
+* `catch`: catches an exception and returns a list that looks like
+  `[<type> <payload> <stack>]`, if passed non-exception expression, returns
+  `["ok" car[_]]`
 * `~`: returns `return` exception (which is swallowed by block which returns
   `car[_]` of `~`, i.e., the `return` payload)
 
@@ -213,8 +216,8 @@ The following can be derived from other primitives: `>=`, `<=`, `!=`, `^`
 (lists), any variations on `cadr` or `caddr` etc., `@` (map), `.` (from, to),
 `pi` (any constants).
 
-They'd be faster as primitives, but curry is *pure*.  Pure evil, because curries
-are supposed to be *spicy*.
+They'd be faster as primitives, but Curry is *pure*.  Pure evil and delicious,
+because curries are supposed to be *spicy*.
 
 ## See More
 
