@@ -32,7 +32,7 @@ curry has Coco Ichi, but we all know that Indian is best.  I give you Raj Majal
 in 東京 as proof).  Also, there is no currying in this langauge.  It's not even
 possible, technically speaking.  Clear?  Clear.
 
-Also, it has code so "beautiful" that will make you `.cry`.  Sorry.  (Not
+Also, it has code so "beautiful" that will make you `.cry`  Sorry.  (Not
 sorry.)
 
 ## Example
