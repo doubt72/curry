@@ -7,8 +7,9 @@ This language is more or less based on
 [doubtful](https://github.com/doubt72/doubtful), another fairly pointless toy
 language.  Both were written as an experimental (learning) project after I got
 inspired by reading compiler papers because I didn't know much about compilers
-and was curious (I'd been on the operating system track instead as an
-undergraduate.  Although I didn't finish a computer science major, it wasn't
+and was curious.  Up to that point I'd never really known anything about
+compilers at all, I'd been on the operating system track instead as an
+undergraduate (although I didn't finish a computer science major, it wasn't
 because I didn't have enough computer science credits).  In hindsight, reading
 those papers and things may have been a poor decision, but I guess it passed the
 time between interviews.
