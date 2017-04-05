@@ -1,70 +1,100 @@
 ### Helper functions:
 
-!=[a b]:![=[a b]];;
+foo:car[_];;
+>>[foo[1]];
 
-^[a b]:?[a ![b] b];;
+~[1];
 
->=[a b]:|[>[a b] =[a b]];;
-<=[a b]:|[<[a b] =[a b]];;
+nil:[];;
+
+$:list:car[__];;n:car[cdr[__]];;
+  ?[=[n 0] ~[car[list]] nil];
+  $[cdr[list] -[n 1]];;
+
+!=:![=[$[_ 0] $[_ 1]]];;
+
+^:?[$[_ 0] ![$[_ 1]] $[_ 1]];;
+
+>=:|[>[$[_ 0] $[_ 1]] =[$[_ 0] $[_ 1]]];;
+<=:|[<[$[_ 0] $[_ 1]] =[$[_ 0] $[_ 1]]];;
 
 # This sort of recursion doesn't terminate because ? is regular function so
 # pow always gets evaluated before being passed and results in infinite
 # unterminated recursion [i.e. don't do this]:
-# pow[a b]:?[=[b 0] 1 *[a pow[a -[b 1]]]];;
+# pow:?[=[$[_ 1] 0] 1 *[$[_ 0] pow[a -[$[_ 1] 1]]]];;
 
 # Do this instead [i.e. use ~ in a previous statement]:
-pow[a b]:?[=[b 0] ~[1] nil];*[a pow[a -[b 1]]];;
+pow:?[=[$[_ 1] 0] ~[1] nil];*[$[_ 0] pow[$[_ 0] -[$[_ 1] 1]]];;
 
-len[list]:?[=[list nil] ~[0] nil];+[1 len[cdr[list]]];;
+len:list:$[__ 1];;?[=[list nil] ~[0] nil];+[1 len[cdr[list]]];;
 
 # Naive implementation that explodes on list shorter than n [for example]
-truncate[list n]:
- ?[=[n len[list]] ~[[]] nil];
- +[[car[list]] truncate[cdr[list] n]];;
+truncate:
+  list:$[__ 0];;
+  n:$[__ 1];;
+  ?[=[n len[list]] ~[[]] nil];
+  +[[car[list]] truncate[cdr[list] n]];;
 
 # Also naive
-cd...dr[list n]:
- ?[=[n 0] ~[list] nil];
- cd...dr[cdr[list] -[n 1]];;
+cd...dr:
+  list:$[__ 0];;
+  n:$[__ 1];;
+  ?[=[n 0] ~[list] nil];
+  cd...dr[cdr[list] -[n 1]];;
 
 # Also naive no range checking
-sub[list start range]:
- truncate[cd...dr[list start] -[-[len[list] start] range]];;
+sub:
+  list:$[__ 0];;
+  start:$[__ 1];;
+  range:$[__ 1];;
+  truncate[cd...dr[list start] -[-[len[list] start] range]];;
 
-@[list func]:
- ?[=[cdr[list] nil] ~[[,[func car[list]]]] nil];
- +[[,[func car[list]]] @[cdr[list] func]];;
+@:list:$[__ 0];;func:$[__ 1];;
+  ?[=[cdr[list] nil] ~[[,[func car[list]]]] nil];
+  +[[,[func car[list]]] @[cdr[list],func]];;
 
-.[n m]:
- ?[=[n m] ~[[m]] nil];
- +[[n] .[+[n 1] m]];;
+.:n:$[_. 0];;m:$[_. 1];;
+  ?[=[n m] ~[[m]] nil];
+  +[[n] .[+[n 1] m]];;
 
 ### Our testing harness:
 
-succeed[msg]:
+succeed:msg:$[__ 0];;
  +["+ : " msg];;
 
 # Look at these literal newlines:
-fail[a b msg]:
- l1:+["- : " msg];;
- l2:+["
- : expected : " string[b]];;
- l3:+["
- : got   : " string[a]];;
- +[l1 +[l2 l3]];;
+fail:
+  a:$[__ 0];;
+  b:$[__ 1];;
+  msg:$[__ 1];;
+  l1:+["- : " msg];;
+  l2:+["
+  : expected : " string[b]];;
+  l3:+["
+  : got   : " string[a]];;
+  +[l1 +[l2 l3]];;
 
-assert[a b msg]:
- out:?[=[a b] succeed[msg] fail[a b msg]];;
- >>[out];
- =[a b];;
+assert:
+  a:$[__ 0];;
+  b:$[__ 1];;
+  msg:$[__ 1];;
+  out:?[=[a b] succeed[msg] fail[a b msg]];;
+  >>[out];
+  =[a b];;
 
-assert![a b msg]:
- out:?[!=[a b] succeed[msg] fail[a b msg]];;
- >>[out];
- !=[a b];;
+assert!:
+  a:$[__ 0];;
+  b:$[__ 1];;
+  msg:$[__ 1];;
+  out:?[!=[a b] succeed[msg] fail[a b msg]];;
+  >>[out];
+  !=[a b];;
 
-assert_error[a b msg]:
- assert[car[catch[a]] b msg];;
+assert_error:
+  a:$[__ 0];;
+  b:$[__ 1];;
+  msg:$[__ 1];;
+  assert[car[catch[a]] b msg];;
 
 assert[1 1 "one equals one"];
 assert![1 0 "one does not equal zero"];
@@ -81,13 +111,13 @@ assert[test_02[1] 1 "inner functions work"];
 ### Anonymous functions:
 
 # TODO: this is not going to work
-test_04[a]::a;;;
+test_04::car[_];;;
 assert[,[test_04[1]] 1 "call of function that returns function works"];
 
-test_05:[a]:a;;;
-assert[,[test_05 1] 1 "call of anonymous function with parameter works"];
+test_05::car[_];;;
+assert[,[test_05 [1]] 1 "call of anonymous function with parameter works"];
 
-assert[,[[a]:a;; 1] 1 "call of inline anonymous function with parameter works"];
+#assert[,[:car[_];; [1]] 1 "call of inline anonymous function with parameter works"];
 
 assert_error[,[] "arity error" "arity error for ,"];
 assert_error[,[test_05] "arity error" "arity error for function in ,"];
@@ -290,9 +320,9 @@ assert[len[[1 2 3]] 3 "len works on list"];
 assert[truncate[[1 2 3 4] 1] [1 2 3] "truncate works on list"];
 assert[truncate[[1 2 3 4] 2] [1 2] "truncate works on list"];
 assert[sub[[1 2 3 4] 1 2] [2 3] "sub works"];
-assert[index[[1 2 3 4] 2] 3 "index works"]
+assert[$[[1 2 3 4] 2] 3 "index works"];
 
-test_09:[a]:+[a 1];;;
+test_09::+[$[_ 0] 1];;;
 assert[@[[1 2 3] test_09] [2 3 4] "map (@) works"];
 
 assert[.[1 4] [1 2 3 4] "range (.) works"];

@@ -15,10 +15,13 @@ instead).  In hindsight, reading those papers and things may have been a poor
 decision, but I guess it passed the time between interviews.
 
 Anyway, I did learn some interesting (to me) things about language design in the
-process, not that the result is likely useful for anyone else.  So far it hasn't
-actually produced an actual compiler, just this interpreter, though I've been
-idly thinking about hooking it into LLVM for shits and giggles and excruciating
-pain.
+process, not that the result is likely useful for anyone else.  (For the record,
+doubtful was just a simple functional language.  After making some changes to
+this one, I ended up with something a lot more like Scheme with terrible syntax.
+I'm not sure what to make of that.  Or, well, I have an idea but I'm not going
+to say it). So far it hasn't actually produced an actual compiler, just this
+interpreter, though I've been idly thinking about hooking it into LLVM for shits
+and giggles and excruciating pain.
 
 I also (mostly) learned Rust in the process.  Because why tackle any significant
 project without learning a new language you've never even looked at before at
@@ -42,9 +45,16 @@ Here is an example:
 
 ```
 # Map function implementation:
-@:list:car[_];func:car[cdr[_]];
-  ?[=[cdr[list] nil] ~[[,[func car[list]]]] nil];
-  +[[,[func car[list]]] @[cdr[list],func]];;
+map:
+  list:
+    car[__ 0];
+  ;
+  func:
+    car[cdr[__]];
+  ;
+  ?[=[cdr[list] []]] ~[[,[func car[list]]]] []]];
+  +[[,[func car[list]]] @[cdr[list],func]];
+;
 
 # Usage Example:
 add_one::+[car[_] 1];;;
@@ -76,7 +86,7 @@ string: `"0"` (so far, so simple).
 
 * **List**: lists are internally represented as S-expressions.  I kinda got Lisp
   all over my language.  Can't seem to get the stains out.  It got everywhere
-  except the places it's not.
+  except the places it's not.  Can contain any types in any order.
 * **Function**: functions are a first-class type. Then again, there aren't any
   other kinds of types, so they're just a type, I guess.  Functions take a
   single argument (which must be a list).
@@ -140,12 +150,12 @@ Anything else can be used in a function name.
 
 ## BNF:
 
-Have a BNF:
+Have some BNF:
 
 ```
 <block> ::= [ <expression> ';' ]*
 <expression> ::= <definition> | <call> | <literal>
-<definition> ::= [ <id> ] [ <list> ] ':' <block>
+<definition> ::= [ <id> ] ':' <block>
 <call> ::= <id> [ <list> ]
 <literal> ::= <scalar> | <list>
 <list> ::= '[' [ <expression> ] [ <whitespace> <expression> ]* ']'
@@ -212,7 +222,7 @@ the like).
 ## Not Primitives:
 
 The following can be derived from other primitives: `>=`, `<=`, `!=`, `^`
-(exclusive or), `pow`, `truncate` (lists), `index` (lists), `sub` (lists), `len`
+(exclusive or), `pow`, `truncate` (lists), `$` (index), `sub` (lists), `len`
 (lists), any variations on `cadr` or `caddr` etc., `@` (map), `.` (from, to),
 `pi` (any constants).
 
