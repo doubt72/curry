@@ -2,6 +2,7 @@
 
 use encoding::Block;
 use encoding::Evaluation;
+use encoding::ListEval;
 use encoding::Exception;
 use encoding::ExceptionType;
 
@@ -15,7 +16,11 @@ pub fn exception(flavor: ExceptionType, id: &String, msg: String) ->
 
 pub fn evaluate(block: &Block) {
   let mut scope = Vec::new();
-  let result = block.evaluate(&mut scope, &"[main program]".to_string());
+  let result = block.evaluate(
+    &mut scope,
+    &ListEval{ items: Vec::new() },
+    &"[main program]".to_string()
+  );
   match &result {
     &Evaluation::Exception(ref e) => {
       println!("{}", e);

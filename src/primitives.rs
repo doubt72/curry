@@ -7,22 +7,22 @@ use encoding::ListEval;
 use encoding::Exception;
 use encoding::ExceptionType;
 
-fn expect_args(count: usize, params: &Vec<Evaluation>, id: &String) ->
+fn expect_args(count: usize, param: &ListEval, id: &String) ->
   Option<Evaluation> {
-  if count != params.len() {
+  if count != param.items.len() {
     Some(evaluator::exception(ExceptionType::ArgError, id,
                               format!("expected argument list of length {} but got {}",
                                       count,
-                                      params.len())))
+                                      param.items.len())))
   } else {
     None
   }
 }
 
 // TODO: break this up into functions?  Could abstract this substantially, too
-pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
+pub fn system_functions(id: String, param: ListEval) -> Evaluation {
   if id != "?" && id != "catch" {
-    for p in &params {
+    for p in &param.items {
       match p {
         &Evaluation::Exception(_) => { return p.clone(); },
         _ => {
@@ -34,10 +34,10 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
   match &*id {
     // Type Conversion
     "int" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Float(x) => Evaluation::Integer(x as i64),
             Evaluation::String(ref s) => {
               match s.parse::<i64>() {
@@ -53,10 +53,10 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "float" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Integer(x) => Evaluation::Float(x as f64),
             Evaluation::String(ref s) => {
               match s.parse::<f64>() {
@@ -72,17 +72,17 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "string" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
-        None => Evaluation::String(format!("{}", params[0])),
+        None => Evaluation::String(format!("{}", param.items[0])),
       }
     },
     // IO
     ">>" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::String(ref s) => {
               println!("{}", s);
               // TODO: return empty list instead
@@ -96,12 +96,12 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
     },
     // MATH (plus appending things)
     "+" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Integer(x + y),
                 Evaluation::Float(y) => Evaluation::Float(x as f64 + y),
                 _ => evaluator::exception(ExceptionType::TypeMismatch, &id,
@@ -109,7 +109,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::Float(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Float(x + y as f64),
                 Evaluation::Float(y) => Evaluation::Float(x + y),
                 _ => evaluator::exception(ExceptionType::TypeMismatch, &id,
@@ -117,7 +117,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::String(ref s) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::String(ref t) => {
                   let mut rc = s.clone();
                   rc += &t.clone();
@@ -128,7 +128,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::List(ref list) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::List(ref list2) => {
                   let mut rc = ListEval { items: Vec::new() };
                   for i in &list.items {
@@ -139,14 +139,8 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
                   }
                   Evaluation::List(rc)
                 },
-                _ => {
-                  let mut rc = ListEval { items: Vec::new() };
-                  for i in &list.items {
-                    rc.items.push(i.clone());
-                  }
-                  rc.items.push(params[1].clone());
-                  Evaluation::List(rc)
-                },
+                _ => evaluator::exception(ExceptionType::TypeMismatch, &id,
+                                          "can only append list to list".to_string()),
               }
             },
             _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -156,12 +150,12 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "-" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Integer(x - y),
                 Evaluation::Float(y) => Evaluation::Float(x as f64 - y),
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -169,7 +163,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::Float(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Float(x - y as f64),
                 Evaluation::Float(y) => Evaluation::Float(x - y),
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -183,12 +177,12 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "*" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Integer(x * y),
                 Evaluation::Float(y) => Evaluation::Float(x as f64 * y),
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -196,7 +190,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::Float(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Float(x * y as f64),
                 Evaluation::Float(y) => Evaluation::Float(x * y),
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -210,13 +204,13 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "/" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             // TODO: handle division by zero with proper error
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Integer(x / y),
                 Evaluation::Float(y) => Evaluation::Float(x as f64 / y),
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -224,7 +218,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::Float(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Float(x / y as f64),
                 Evaluation::Float(y) => Evaluation::Float(x / y),
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -238,13 +232,13 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "%" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             // TODO: handle division by zero with proper error
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => Evaluation::Integer(x % y),
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
                                           "integer arguments expected".to_string()),
@@ -258,10 +252,10 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
     },
     // BOOLEAN
     "!" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::True => Evaluation::False,
             Evaluation::False => Evaluation::True,
             _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -271,12 +265,12 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     }
     "&" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::True => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::True => Evaluation::True,
                 Evaluation::False => Evaluation::False,
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -284,7 +278,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::False => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::True => Evaluation::False,
                 Evaluation::False => Evaluation::False,
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -298,12 +292,12 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "|" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::True => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::True => Evaluation::True,
                 Evaluation::False => Evaluation::True,
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -311,7 +305,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::False => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::True => Evaluation::True,
                 Evaluation::False => Evaluation::False,
                 _ => evaluator::exception(ExceptionType::TypeError, &id,
@@ -326,13 +320,13 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
     },
     // CONTROL
     "?" => {
-      match expect_args(3, &params, &id) {
+      match expect_args(3, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
-            Evaluation::Exception(_) => params[0].clone(),
-            Evaluation::True => params[1].clone(),
-            Evaluation::False => params[2].clone(),
+          match param.items[0] {
+            Evaluation::Exception(_) => param.items[0].clone(),
+            Evaluation::True => param.items[1].clone(),
+            Evaluation::False => param.items[2].clone(),
             _ => evaluator::exception(ExceptionType::TypeError, &id,
                                       "expected boolean for first argument".to_string()),
           }
@@ -340,24 +334,24 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "=" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::True => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::True => Evaluation::True,
                 _ => Evaluation::False,
               }
             },
             Evaluation::False => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::False => Evaluation::True,
                 _ => Evaluation::False,
               }
             },
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => {
                   if x == y {
                     Evaluation::True
@@ -369,7 +363,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::Float(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Float(y) => {
                   if x == y {
                     Evaluation::True
@@ -381,7 +375,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::String(ref x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::String(ref y) => {
                   if &x == &y {
                     Evaluation::True
@@ -393,25 +387,25 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::List(ref x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::List(ref y) => {
                   if x.items.len() != y.items.len() {
                     Evaluation::False
                   } else {
-                    let mut rc = Evaluation::True;
                     for n in 0..x.items.len() {
-                      let cmp = vec![x.items[n].clone(), y.items[n].clone()];
+                      let mut cmp = ListEval{ items: Vec::new() };
+                      cmp.items.push(x.items[n].clone());
+                      cmp.items.push(y.items[n].clone());
                       match system_functions("=".to_string(), cmp) {
                         Evaluation::True => {
                           // do nothing, everything still matches
                         },
                         _ => {
-                          rc = Evaluation::False;
-                          break;
-                        }
+                          return Evaluation::False;
+                        },
                       }
                     }
-                    rc
+                    Evaluation::True
                   }
                 },
                 _ => Evaluation::False,
@@ -423,12 +417,12 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     ">" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => {
                   if x > y {
                     Evaluation::True
@@ -448,7 +442,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::Float(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => {
                   if x > y as f64 {
                     Evaluation::True
@@ -474,12 +468,12 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "<" => {
-      match expect_args(2, &params, &id) {
+      match expect_args(2, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Integer(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => {
                   if x < y {
                     Evaluation::True
@@ -500,7 +494,7 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
               }
             },
             Evaluation::Float(x) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(y) => {
                   if x < y as f64 {
                     Evaluation::True
@@ -526,14 +520,14 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "substr" => {
-      match expect_args(3, &params, &id) {
+      match expect_args(3, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::String(ref s) => {
-              match params[1] {
+              match param.items[1] {
                 Evaluation::Integer(start) => {
-                  match params[2] {
+                  match param.items[2] {
                     Evaluation::Integer(len) => {
                       let chars = s.chars();
                       if start as usize >= s.len() {
@@ -561,10 +555,10 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "strlen" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::String(ref s) => {
               Evaluation::Integer(s.chars().count() as i64)
             },
@@ -575,10 +569,10 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "car" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::List(ref list) => {
               match list.items.first() {
                 Some(item) => {
@@ -595,15 +589,16 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "cdr" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::List(ref list) => {
-              match list.tail {
-                Some(tail) => tail.clone(),
-                None => list.clone(),
+              let mut rc = list.clone();
+              if rc.items.len() > 0 {
+                rc.items.remove(0);
               }
+              Evaluation::List(rc)
             },
             _ => evaluator::exception(ExceptionType::TypeError, &id,
                                       "list argument expected".to_string()),
@@ -612,38 +607,37 @@ pub fn system_functions(id: String, params: Vec<Evaluation>) -> Evaluation {
       }
     },
     "catch" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
-          match params[0] {
+          match param.items[0] {
             Evaluation::Exception(ref e) => Evaluation::List(e.to_list()),
-            ref eval => Evaluation::List(ListEval {
-              head: Some(Box::new(Evaluation::String("ok".to_string()))),
-              tail: Some(Box::new(ListEval {
-                head: Some(Box::new(eval.clone())),
-                tail: Some(Box::new(ListEval { head: None, tail: None }))
-              }))
-            }),
+            ref eval => {
+              let mut list = ListEval { items: Vec::new() };
+              list.items.push(Evaluation::String("ok".to_string()));
+              list.items.push(eval.clone());
+              Evaluation::List(list)
+            },
           }
         },
       }
     },
     "raise" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
           Evaluation::Exception(Exception { flavor: ExceptionType::Error,
-                                            payload: Box::new(params[0].clone()),
+                                            payload: Box::new(param.items[0].clone()),
                                             stack: Vec::new() })
         },
       }
     },
     "~" => {
-      match expect_args(1, &params, &id) {
+      match expect_args(1, &param, &id) {
         Some(e) => e,
         None => {
           Evaluation::Exception(Exception { flavor: ExceptionType::Return,
-                                            payload: Box::new(params[0].clone()),
+                                            payload: Box::new(param.items[0].clone()),
                                             stack: Vec::new() })
         },
       }

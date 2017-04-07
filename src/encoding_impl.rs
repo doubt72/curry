@@ -10,7 +10,6 @@ use encoding::Call;
 use encoding::Definition;
 
 use encoding::Scope;
-use encoding::FunctionOrValue;
 use encoding::Evaluation;
 use encoding::ListEval;
 use encoding::Function;
@@ -18,145 +17,90 @@ use encoding::Exception;
 use encoding::ExceptionType;
 
 impl List {
-  pub fn evaluate(&self, scope: &mut Vec<Scope>) -> Evaluation {
-    match self.head {
-      Some(Expression(ref e)) => {
-        match self.tail {
-          Some(List(ref list)) =>  {
-            Evaluation::List(
-              ListEval { head: Some(Box::new(e.evaluate(scope))),
-                         tail: Some(Box::new(list.evaluate(scope))) }
-            )
-          },
-          None => {
-            // This should never happen
-            Evaluation::List(ListEval { head: None, tail: None })
-          },
-        }
-      },
-      None => Evaluation::List(ListEval { head: None, tail: None }),
+  pub fn evaluate(&self, scope: &mut Vec<Scope>) -> ListEval {
+    let mut list = ListEval { items: Vec::new() };
+    for i in &self.items {
+      list.items.push(i.evaluate(scope));
     }
+    list
   }
 
   pub fn clone(&self) -> List {
-    match self.head {
-      Some(Expression(ref e)) => {
-        match self.tail {
-          Some(List(ref list)) =>  {
-            List { head: Some(Box::new(e.clone())),
-                   tail: Some(Box::new(list.clone())) }
-          },
-          None => {
-            // This should never happen
-            List { head: None, tail: None }
-          },
-        }
-      },
-      None => List { head: None, tail: None},
+    let mut list = List { items: Vec::new() };
+    for i in &self.items {
+      list.items.push(i.clone());
     }
+    list
   }
 }
 
 impl Call {
   pub fn evaluate(&self, scope: &mut Vec<Scope>) -> Evaluation {
-    let mut check = false;
-    let rc;
-
-    // Debug here:
-    //println!("CALLING {} IN", &self.id);
-    //for n in 0..scope.len() {
-    //  println!("  {:?}", scope[n]);
-    //}
-
-    // Search through scopes in reverse order for function (or value)
-    let mut binding = FunctionOrValue::Value(Evaluation::False);
     for x in (0..scope.len()).rev() {
       if scope[x].bindings.contains_key(&self.id) {
-        check = true;
-        binding = scope[x].bindings[&self.id].clone();
-        break;
+        let binding = scope[x].bindings[&self.id].clone();
+        let eval = self.param.evaluate(scope);
+        return binding.block.evaluate(scope, &eval, &self.id);
       }
     }
-    if check {
-      match binding {
-        FunctionOrValue::Function(ref func) => {
-          // Add a scope for the function parameters, evaluate, and populate
-          let mut p_scope = Scope { bindings: HashMap::new() };
-          if self.params.len() != func.params.len() {
-            return evaluator::exception(ExceptionType::ArgError, &self.id,
-                                        format!("expected argument list of length {} but got {}",
-                                                self.params.len(),
-                                                func.params.len()));
-          }
-          for y in 0..self.params.len() {
-            let mut block = Block { expressions: Vec::new() };
-            block.expressions.push(self.params[y].clone());
-            let eval = block.evaluate(scope, &self.id);
-            p_scope.bindings.insert(func.params[y].clone(),
-                                    FunctionOrValue::Value(eval));
-          }
-          scope.push(p_scope);
-          rc = func.block.evaluate(scope, &self.id);
-          scope.pop();
-        },
-        FunctionOrValue::Value(ref value) => {
-          // This value has already been evaluated, i.e., it's a passed param
-          rc = value.clone();
-        },
+
+    if self.id == "," {
+      if self.param.items.len() < 2 {
+        return evaluator::exception(ExceptionType::ArgError, &self.id,
+          format!("expected argument list of length 2 but got {}",
+                  self.param.items.len()));
       }
-    } else if self.id == "$" {
-      if self.params.len() < 1 {
-        rc = evaluator::exception(ExceptionType::ArgError, &self.id,
-                                  "expected argument list of at least length 1 but got 0".to_string());
-      } else {
-        let eval = self.params[0].evaluate(scope);
-        match eval {
-          Evaluation::Exception(_) => { return eval.clone(); },
-          Evaluation::Function(ref func) => {
-            // TODO: make helper function
-            // This is (almost) repeated for user functions (minus first param)
-            let mut p_scope = Scope { bindings: HashMap::new() };
-            if self.params.len() - 1 != func.params.len() {
-              return evaluator::exception(ExceptionType::ArgError, &self.id,
-                                          format!("called function expected argument list of length {} but got {}",
-                                                  self.params.len() - 1,
-                                                  func.params.len()));
-            }
-            for y in 1..self.params.len() {
-              let mut block = Block { expressions: Vec::new() };
-              block.expressions.push(self.params[y].clone());
-              let eval = block.evaluate(scope, &self.id);
-              p_scope.bindings.insert(func.params[y-1].clone(),
-                                      FunctionOrValue::Value(eval));
-            }
-            scope.push(p_scope);
-            rc = func.block.evaluate(scope, &self.id);
-            scope.pop();
-          },
-          _ => {
-            rc = evaluator::exception(ExceptionType::TypeError, &self.id,
-                                      "function expected as first argument".to_string());
-          },
+      let eval = self.param.items[0].evaluate(scope);
+      match eval {
+        Evaluation::Exception(_) => { return eval; },
+        Evaluation::Function(ref func) => {
+          match self.param.items[1] {
+            Expression::List(ref list) => {
+              let elist = list.evaluate(scope);
+              return func.block.evaluate(scope, &elist, &self.id);
+            },
+            _ => {
+              return evaluator::exception(ExceptionType::TypeError, &self.id,
+                "list expected as second argument".to_string());
+            },
+          }
         }
+        _ => {
+          return evaluator::exception(ExceptionType::TypeError, &self.id,
+            "function expected as first argument".to_string());
+        },
       }
     } else {
-      // Try low-level system functions
-      let mut params = Vec::new();
-      for p in &self.params {
-        let eval = p.evaluate(scope);
-        params.push(eval);
+      match self.id.chars().nth(0) {
+        Some('_') => {
+          // Parametric functions
+          let mut depth = 0;
+          for c in self.id.chars() {
+            if c == '_' {
+              depth += 1;
+            } else {
+              return evaluator::exception(ExceptionType::TypeError, &self.id,
+                "function is not defined in scope".to_string());
+            }
+          }
+          if depth > scope.len() {
+            return evaluator::exception(ExceptionType::TypeError, &self.id,
+              "attempt to reach out of main scope".to_string());
+          }
+          let param = scope[scope.len() - depth].param.clone();
+          Evaluation::List(param)
+        },
+        _ => {
+          // Try low-level system functions
+          primitives::system_functions(self.id.clone(),
+                                       self.param.evaluate(scope))
+        }
       }
-      rc = primitives::system_functions(self.id.clone(), params);
     }
-    rc
   }
 
   pub fn clone(&self) -> Call {
-    let mut call = Call { id: self.id.clone(), params: Vec::new() };
-    for p in &self.params {
-      call.params.push(p.clone());
-    }
-    call
+    Call { id: self.id.clone(), param: self.param.clone() }
   }
 }
 
@@ -169,12 +113,8 @@ impl Definition {
                                     format!("attempt to redefine {}",
                                             self.id));
       }
-      let mut func = Function { params: Vec::new(), block: self.block.clone() };
-      for p in &self.params {
-        func.params.push(p.clone());
-      }
-      s.bindings.insert(self.id.clone(),
-                         FunctionOrValue::Function(func.clone()));
+      let func = Function { block: self.block.clone() };
+      s.bindings.insert(self.id.clone(), func.clone());
       Evaluation::Function(func)
     } else {
       panic!("internal error: no scope supplied to definition evaluation");
@@ -182,12 +122,7 @@ impl Definition {
   }
 
   pub fn clone(&self) -> Definition {
-    let mut def = Definition { id: self.id.clone(), params: Vec::new(),
-                               block: self.block.clone() };
-    for p in &self.params {
-      def.params.push(p.clone());
-    }
-    def
+    Definition { id: self.id.clone(), block: self.block.clone() }
   }
 }
 
@@ -199,7 +134,7 @@ impl Expression {
       &Expression::Integer(x) => Evaluation::Integer(x),
       &Expression::Float(x) => Evaluation::Float(x),
       &Expression::String(ref s) => Evaluation::String(s.clone()),
-      &Expression::List(ref list) => list.evaluate(scope),
+      &Expression::List(ref list) => Evaluation::List(list.evaluate(scope)),
       &Expression::Call(ref call) => call.evaluate(scope),
       &Expression::Definition(ref def) => def.evaluate(scope),
     }
@@ -220,11 +155,12 @@ impl Expression {
 }
 
 impl Block {
-  pub fn evaluate(&self, scope: &mut Vec<Scope>, context: &String) ->
+  pub fn evaluate(&self, scope: &mut Vec<Scope>, param: &ListEval,
+                  context: &String) ->
     Evaluation {
 
     // Add current context
-    let current = Scope { bindings: HashMap::new() };
+    let current = Scope { bindings: HashMap::new(), param: param.clone() };
     scope.push(current);
 
     // Evaluate
@@ -243,8 +179,6 @@ impl Block {
         },
         ev => { value = ev },
       }
-      // Debug output:
-      //println!("{:?}", value);
     }
     // Current context going out of scope
     scope.pop();
@@ -257,19 +191,6 @@ impl Block {
       rc.expressions.push(i.clone());
     }
     rc
-  }
-}
-
-impl FunctionOrValue {
-  pub fn clone(&self) -> FunctionOrValue {
-    match self {
-      &FunctionOrValue::Function(ref func) => {
-        FunctionOrValue::Function(func.clone())
-      },
-      &FunctionOrValue::Value(ref value) => {
-        FunctionOrValue::Value(value.clone())
-      },
-    }
   }
 }
 
@@ -290,31 +211,17 @@ impl Evaluation {
 
 impl ListEval {
   pub fn clone(&self) -> ListEval {
-    match self.head {
-      Some(Evaluation(ref e)) => {
-        match self.tail {
-          Some(List(ref list)) =>  {
-            ListEval { head: Some(Box::new(e.clone())),
-                       tail: Some(Box::new(list.clone()))}
-          },
-          None => {
-            // This should never happen
-            ListEval { head: None, tail: None }
-          },
-        }
-      },
-      None => ListEval { head: None, tail: None},
+    let mut list = ListEval { items: Vec::new() };
+    for i in &self.items {
+      list.items.push(i.clone());
     }
+    list
   }
 }
 
 impl Function {
   pub fn clone(&self) -> Function {
-    let mut func = Function { params: Vec::new(), block: self.block.clone() };
-    for p in &self.params {
-      func.params.push(p.clone());
-    }
-    func
+    Function { block: self.block.clone() }
   }
 }
 
@@ -336,23 +243,15 @@ impl Exception {
   }
 
   pub fn to_list(&self) -> ListEval {
-    let mut stack = ListEval { head: None, tail: None };
-    for i in (0..self.stack.len()).rev() {
-      stack = ListEval {
-        head: Some(Box::new(Evaluation::String(self.stack[i].clone()))),
-        tail: Some(Box::new(stack))
-      };
+    let mut stack = ListEval { items: Vec::new() };
+    let mut rc = ListEval { items: Vec::new() };
+    rc.items.push(Evaluation::String(self.flavor.to_string()));
+    rc.items.push(self.payload.clone());
+    for i in &self.stack {
+      stack.items.push(Evaluation::String(i.clone()));
     }
-    ListEval {
-      head: Some(Box::new(Evaluation::String(e.flavor.to_string()))),
-      tail: Some(Box::new(ListEval {
-        head: Some(Box::new(e.payload.clone())),
-        tail: Some(Box::new(ListEval {
-          head: Some(Box::new(Evaluation::List(stack))),
-          tail: Some(Box::new(ListEval { head: None, tail: None }))
-        }))
-      }))
-    }
+    rc.items.push(Evaluation::List(stack));
+    rc
   }
 }
 

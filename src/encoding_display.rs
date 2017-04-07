@@ -7,9 +7,9 @@ use encoding::Token;
 use encoding::TokenValue;
 
 use encoding::Expression;
+use encoding::List;
 
 use encoding::Scope;
-use encoding::FunctionOrValue;
 use encoding::Evaluation;
 use encoding::Function;
 use encoding::Exception;
@@ -44,58 +44,30 @@ impl Debug for Expression {
       &Expression::Float(ref x) => "FLOAT:".to_string() + &x.to_string(),
       &Expression::String(ref x) => "STRING:".to_string() + &x,
       &Expression::List(ref x) => {
-        let mut s2 = "LIST:[ ".to_string();
-        let mut head = x.head;
-        let mut tail = x.tail;
-        loop {
-          match head {
-            Some(Expression(ref e)) => {
-              s2 += &format!("{:?} ", e);
-              match tail {
-                Some(list) => {
-                  head = list.head;
-                  tail = list.tail;
-                },
-                None => {
-                  // This should never happen when head exists
-                },
-              }
-            },
-            None => {
-              break;
-            }
-          }
-        }
-        s2 += "]";
-        s2
+        format!("{:?}", x)
       },
       &Expression::Call(ref x) => {
-        let mut s2 = "CALL:".to_string() + &x.id;
-        if x.params.len() > 0 {
-          s2 += "( ";
-          for i in &x.params {
-            s2 += &format!("{:?} ", i);
-          }
-          s2 += ")";
-        }
-        s2
+        format!("CALL:{}:{:?}", x.id, x.param)
       },
       &Expression::Definition(ref x) => {
         let mut s2 = "DEFINITION:".to_string() + &x.id;
-        if x.params.len() > 0 {
-          s2 += "( ";
-          for i in &x.params {
-            s2 += &i;
-            s2 += &" ".to_string();
-          }
-          s2 += "):";
-        }
         for i in &x.block.expressions {
-          s2 += &format!(" {:?};", i);
+          s2 += &format!("{:?};", i);
         }
         s2
       },
     };
+    write!(f, "{}", s)
+  }
+}
+
+impl Debug for List {
+  fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    let mut s = "LIST:[ ".to_string();
+    for i in &self.items {
+      s += &format!("{:?} ", i);
+    }
+    s += "]";
     write!(f, "{}", s)
   }
 }
@@ -110,20 +82,6 @@ impl Debug for Scope {
   }
 }
 
-impl Debug for FunctionOrValue {
-  fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-    let s = match self {
-      &FunctionOrValue::Function(ref func) => {
-        format!("{:?}", func)
-      },
-      &FunctionOrValue::Value(ref value) => {
-        format!("{:?}", value)
-      },
-    };
-    write!(f, "{}", s)
-  }
-}
-
 impl Debug for Evaluation {
   fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
     let s = match self {
@@ -134,26 +92,8 @@ impl Debug for Evaluation {
       &Evaluation::String(ref x) => "STRING:".to_string() + &x,
       &Evaluation::List(ref x) => {
         let mut s2 = "LIST:[ ".to_string();
-        let mut head = x.head;
-        let mut tail = x.tail;
-        loop {
-          match head {
-            HeadEval::Evaluation(ref e) => {
-              s2 += &format!("{:?} ", e);
-              match tail {
-                Some(list) => {
-                  head = list.head;
-                  tail = list.tail;
-                },
-                _ => {
-                  // This should never happen when head exists
-                },
-              }
-            },
-            HeadEval::Empty => {
-              break;
-            }
-          }
+        for i in &x.items {
+          s2 += &format!("{:?} ", i);
         }
         s2 += "]";
         s2
@@ -170,19 +110,7 @@ impl Debug for Evaluation {
         s2
       },
       &Evaluation::Function(ref x) => {
-        let mut s2 = "FUNCTION:".to_string();
-        if x.params.len() > 0 {
-          s2 += "( ";
-          for i in &x.params {
-            s2 += &i;
-            s2 += &" ".to_string();
-          }
-          s2 += "):";
-        }
-        for i in &x.block.expressions {
-          s2 += &format!(" {:?};", i);
-        }
-        s2
+        format!("FUNCTION:{:?}", x)
       },
     };
     write!(f, "{}", s)
@@ -191,17 +119,11 @@ impl Debug for Evaluation {
 
 impl Debug for Function {
   fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
-    let mut s = "( ".to_string();
-    for p in &self.params {
-      s += &p;
-      s += " ";
+    let mut s = ":<".to_string();
+    for e in &self.block.expressions {
+      s += &format!("{:?};", e);
     }
-    s += "):";
-    if self.block.expressions.len() == 1 {
-      s += &format!("{:?}", &self.block.expressions[0]);
-    } else {
-      s += "<...>";
-    }
+    s += ">";
     write!(f, "{}", s)
   }
 }
@@ -217,26 +139,8 @@ impl Display for Evaluation {
       &Evaluation::List(ref x) => {
         let mut s2 = "[".to_string();
         let mut items = Vec::new();
-        let mut head = x.head;
-        let mut tail = x.tail;
-        loop {
-          match head {
-            Some(Evaluation(ref e)) => {
-              items.push(format!("{}", e));
-              match tail {
-                Some(list) => {
-                  head = list.head;
-                  tail = list.tail;
-                },
-                _ => {
-                  // This should never happen when head exists
-                },
-              }
-            },
-            None => {
-              break;
-            },
-          }
+        for i in &x.items {
+          items.push(format!("{}", i));
         }
         s2 += &items.join(" ");
         s2 += "]";
@@ -253,19 +157,8 @@ impl Display for Evaluation {
         s2 += "]]";
         s2
       },
-      &Evaluation::Function(ref x) => {
-        let mut s2 = "".to_string();
-        if x.params.len() > 0 {
-          s2 += "(";
-          let mut params = Vec::new();
-          for p in &x.params {
-            params.push(p.clone());
-          }
-          s2 += &params.join(", ");
-          s2 += ")";
-        }
-        s2 += ":<...>";
-        s2
+      &Evaluation::Function(_) => {
+        ":<...>".to_string()
       },
     };
     write!(f, "{}", s)

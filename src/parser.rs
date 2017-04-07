@@ -25,65 +25,13 @@ fn get_token(tokens: &Vec<Token>, start: usize) -> &Token {
   &tokens[start]
 }
 
-fn parse_params(tokens: &Vec<Token>, start: usize) ->
-  (Option<Vec<String>>, usize) {
-  let mut rc = Vec::new();
-  let mut index = start;
-  loop {
-    let token = get_token(tokens, index);
-    match token.value {
-      TokenValue::CloseBracket => {
-        index += 1;
-        break;
-      },
-      TokenValue::ID(ref s) => {
-        rc.push(s.clone());
-        index += 1;
-        let token = get_token(tokens, index);
-        match token.value {
-          TokenValue::CloseBracket => {
-            // do nothing, next loop will catch it
-          },
-          _ => {
-            return (None, 0);
-          }
-        }
-      },
-      _ => {
-        return (None, 0);
-      },
-    }
-  }
-  (Some(rc), index)
-}
-
 fn parse_definition(tokens: &Vec<Token>, start: usize) ->
   (Option<Definition>, usize) {
   let token = get_token(tokens, start);
   match token.value {
     TokenValue::Colon => {
-      // anonymous function with no parameters
       let (block, index) = parse_block(tokens, start + 1);
-      (Some(Definition { id: "".to_string(), params: Vec::new(),
-                         block: block }), index)
-    },
-    TokenValue::OpenBracket => {
-      // anonymous function
-      let (opt, index) = parse_params(tokens, start + 1);
-      match opt {
-        Some(params) => {
-          let token = get_token(tokens, index);
-          match token.value {
-            TokenValue::Colon => {
-              let (block, last) = parse_block(tokens, index + 1);
-              (Some(Definition { id:"".to_string(), params: params,
-                                 block: block }), last)
-            },
-            _ => (None, 0),
-          }
-        },
-        None => (None, 0),
-      }
+      (Some(Definition { id: "".to_string(), block: block }), index)
     },
     TokenValue::ID(ref id) => {
       let mut index = start + 1;
@@ -92,27 +40,7 @@ fn parse_definition(tokens: &Vec<Token>, start: usize) ->
         TokenValue::Colon => {
           index += 1;
           let (block, change) = parse_block(tokens, index);
-          (Some(Definition { id: id.clone(), params: Vec::new(),
-                             block: block }), change)
-        },
-        TokenValue::OpenBracket => {
-          let (opt, change) = parse_params(tokens, index + 1);
-          match opt {
-            Some(params) => {
-              index = change;
-              let token = get_token(tokens, index);
-              match token.value {
-                TokenValue::Colon => {
-                  index += 1;
-                  let (block, last) = parse_block(tokens, index);
-                  (Some(Definition { id: id.clone(), params: params,
-                                     block: block }), last)
-                },
-                _ => (None, 0),
-              }
-            },
-            None => (None, 0),
-          }
+          (Some(Definition { id: id.clone(), block: block }), change)
         },
         _ => (None, 0),
       }
@@ -127,31 +55,14 @@ fn parse_call(tokens: &Vec<Token>, start: usize) -> (Call, usize) {
     TokenValue::ID(ref s) => s.clone(),
     _ => panic!("if you see this, there's a bug in the parser"),
   };
-  let mut rc = Call { id: id, params: Vec::new() };
+  let mut rc = Call { id: id, param: List { items: Vec::new() }};
   let mut index = start + 1;
   token = get_token(tokens, index);
   match token.value {
     TokenValue::OpenBracket => {
-      index += 1;
-      loop {
-      token = get_token(tokens, index);
-        match token.value {
-          TokenValue::CloseBracket => {
-            index += 1;
-            break;
-          },
-          _ => {
-            let (param, change) = parse_next_expression(tokens, index);
-            match param {
-              Some(exp) => rc.params.push(exp),
-              None =>  parse_error("expression or close paren expected".to_string(),
-                                   token.lnum, &token.line),
-
-            }
-            index = change;
-          }
-        }
-      }
+      let (list, change) = parse_list(tokens, index);
+      index = change;
+      rc.param = list;
     },
     _ => {
       // Do nothing, bare function call
@@ -161,23 +72,32 @@ fn parse_call(tokens: &Vec<Token>, start: usize) -> (Call, usize) {
 }
 
 fn parse_list(tokens: &Vec<Token>, start: usize) -> (List, usize) {
-  let token = get_token(tokens, start + 1);
-  match token.value {
-    TokenValue::CloseBracket => (List {head: Box::new(Head::Empty)}, start + 2),
-    _ => {
-      let (item, index) = parse_next_expression(tokens, start + 1);
-      match item {
-        some(exp) => {
-          let (tail, final) = parse_list(tokens, index);
-          (List { head: Box:new(Head::Expression(item))
-                  tail: Box::new(tail) }, final + 1)
-        },
-        None => parse_error("expression or close bracket expected".to_string(),
-                            token.lnum, &token.line),
-      }
-    },
+  let mut index = start + 1;
+  let mut rc = List { items: Vec::new() };
+  loop {
+    let token = get_token(tokens, index);
+    match token.value {
+      TokenValue::CloseBracket => {
+        break;
+      },
+      _ => {
+        let (item, change) = parse_next_expression(tokens, index);
+        index = change;
+        match item {
+          Some(exp) => {
+            rc.items.push(exp);
+          },
+          None => {
+            parse_error("expression or close bracket expected".to_string(),
+                        token.lnum, &token.line);
+          },
+        }
+      },
+    }
   }
+  (rc, index + 1)
 }
+
 fn parse_next_expression(tokens: &Vec<Token>, start: usize) ->
   (Option<Expression>, usize) {
   let token = get_token(tokens, start);
@@ -210,7 +130,7 @@ fn parse_next_expression(tokens: &Vec<Token>, start: usize) ->
           (Some(Expression::Definition(def)), index - 1)
         },
         None => {
-          parse_error("expected function definition, didn't get one".to_string(),
+          parse_error("expected function definition after colon, didn't get one".to_string(),
                       token.lnum, &token.line);
           (None, 0)
         },
@@ -228,8 +148,6 @@ fn parse_block(tokens: &Vec<Token>, start: usize) -> (Block, usize) {
     match next {
       Some(value) => {
         index = change;
-        // For debugging:
-        println!("{:?}", value);
         rc.expressions.push(value);
       },
       None => {

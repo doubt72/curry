@@ -51,7 +51,7 @@ fn next_token(chars: &Vec<char>, start: usize, key: &LineLookup) ->
     '"' => {
       index += 1;
       c = chars[index];
-      // Everything to next quote is string
+      // Everything to next double-quote is string
       // TODO: string escapes
       while index < chars.len() - 1 && c != '"' {
         index += 1;
@@ -72,18 +72,19 @@ fn next_token(chars: &Vec<char>, start: usize, key: &LineLookup) ->
       }
       let s:String = chars[from..index].iter().cloned().collect();
       if s == "true" {
-        (TokenValue::True, index);
+        (TokenValue::True, index)
       } else if s == "false" {
-        (TokenValue::False, index);
-      }
-      match s.parse::<i64>() {
-        Ok(n) => (TokenValue::Integer(n), index),
-        _ => {
-          match s.parse::<f64>() {
-            Ok(n) => (TokenValue::Float(n), index),
-            _ => (TokenValue::ID(s), index),
-          }
-        },
+        (TokenValue::False, index)
+      } else {
+        match s.parse::<i64>() {
+          Ok(n) => (TokenValue::Integer(n), index),
+          _ => {
+            match s.parse::<f64>() {
+              Ok(n) => (TokenValue::Float(n), index),
+              _=> (TokenValue::ID(s), index),
+            }
+          },
+        }
       }
     },
   };
@@ -112,7 +113,6 @@ pub fn build_line_key(chars: &Vec<char>) -> LineLookup {
 }
 
 pub fn tokenize(s: &str) -> Vec<Token> {
-  //let chars:Vec<char> = s.chars().collect();
   let chars = s.chars().collect();
   let key = build_line_key(&chars);
 
@@ -122,8 +122,6 @@ pub fn tokenize(s: &str) -> Vec<Token> {
   while index < chars.len() {
     let (token, change) = next_token(&chars, index, &key);
     index = change;
-    // For debugging:
-    // println!("{}:{:?}", index, token);
     tokens.push(token);
   }
   tokens

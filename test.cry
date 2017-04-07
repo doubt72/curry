@@ -1,15 +1,12 @@
 ### Helper functions:
 
-foo:car[_];;
->>[foo[1]];
-
-~[1];
-
 nil:[];;
 
 $:list:car[__];;n:car[cdr[__]];;
   ?[=[n 0] ~[car[list]] nil];
   $[cdr[list] -[n 1]];;
+
+>>[string[nil]];
 
 !=:![=[$[_ 0] $[_ 1]]];;
 
@@ -101,11 +98,11 @@ assert![1 0 "one does not equal zero"];
 
 ### Functions:
 
-test_00[a]:a;;
-test_01[a]:test_00[a];;
+test_00:[car _];;
+test_01:test_00[car _];;
 assert[test_01[1] 1 "chained functions work"];
 
-test_02[a]:test_03[a]:a;;test_03[a];;
+test_02:test_03:[car _];;test_03[car _];;
 assert[test_02[1] 1 "inner functions work"];
 
 ### Anonymous functions:

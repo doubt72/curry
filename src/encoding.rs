@@ -28,28 +28,28 @@ pub enum Expression {
   Call(Call), Definition(Definition)
 }
 
+// On a high level, we treat lists like S-expressions, but due to some major
+// awkwardness in Rust, it's actually much, much easier to implement lists as a
+// vector.  Not because the logic is easier (it's not...  Well, ceremony aside,
+// anyway), but because the option-box pattern (besides being inherently
+// awkward) is well nigh unusable for certain use cases
 pub struct List {
-  pub head: Option<Box<Expression>>,
-  pub tail: Option<Box<List>>
+  pub items: Vec<Expression>
 }
 
 pub struct Call {
   pub id: String,
-  pub params: Vec<Expression>
+  pub param: List
 }
 
 pub struct Definition {
   pub id: String,
-  pub params: Vec<String>,
   pub block: Block
 }
 
 pub struct Scope {
-  pub bindings: HashMap<String, FunctionOrValue>
-}
-
-pub enum FunctionOrValue {
-  Function(Function), Value(Evaluation)
+  pub bindings: HashMap<String, Function>,
+  pub param: ListEval
 }
 
 pub enum Evaluation {
@@ -58,12 +58,10 @@ pub enum Evaluation {
 }
 
 pub struct ListEval {
-  pub head: Option<Box<Evaluation>>,
-  pub tail: Option<Box<ListEval>>
+  pub items: Vec<Evaluation>
 }
 
 pub struct Function {
-  pub params: Vec<String>,
   pub block: Block
 }
 
