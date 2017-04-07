@@ -156,10 +156,8 @@ impl Expression {
 
 impl Block {
   pub fn evaluate(&self, scope: &mut Vec<Scope>, param: &ListEval,
-                  context: &String) ->
-    Evaluation {
+                  context: &String) -> Evaluation {
 
-    // Add current context
     let current = Scope { bindings: HashMap::new(), param: param.clone() };
     scope.push(current);
 
@@ -168,8 +166,11 @@ impl Block {
     for e in &self.expressions {
       match e.evaluate(scope) {
         Evaluation::Exception(ref ex) => {
+          scope.pop();
           match &ex.flavor {
-            &ExceptionType::Return => { return ex.payload.clone(); },
+            &ExceptionType::Return => {
+              return ex.payload.clone();
+            },
             _ => {
               let mut rc = ex.clone();
               rc.stack.push(context.clone());
@@ -181,6 +182,7 @@ impl Block {
       }
     }
     // Current context going out of scope
+
     scope.pop();
     value
   }

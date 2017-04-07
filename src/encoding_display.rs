@@ -11,6 +11,7 @@ use encoding::List;
 
 use encoding::Scope;
 use encoding::Evaluation;
+use encoding::ListEval;
 use encoding::Function;
 use encoding::Exception;
 use encoding::ExceptionType;
@@ -91,12 +92,7 @@ impl Debug for Evaluation {
       &Evaluation::Float(ref x) => "FLOAT:".to_string() + &x.to_string(),
       &Evaluation::String(ref x) => "STRING:".to_string() + &x,
       &Evaluation::List(ref x) => {
-        let mut s2 = "LIST:[ ".to_string();
-        for i in &x.items {
-          s2 += &format!("{:?} ", i);
-        }
-        s2 += "]";
-        s2
+        format!("{:?}", x)
       },
       &Evaluation::Exception(ref x) => {
         let mut s2 = format!("EXCEPTION:[{}, ", x.flavor);
@@ -113,6 +109,17 @@ impl Debug for Evaluation {
         format!("FUNCTION:{:?}", x)
       },
     };
+    write!(f, "{}", s)
+  }
+}
+
+impl Debug for ListEval {
+  fn fmt(&self, f: &mut Formatter) -> Result<(), Error> {
+    let mut s = "LIST:[ ".to_string();
+    for i in &self.items {
+      s += &format!("{:?} ", i);
+    }
+    s += "]";
     write!(f, "{}", s)
   }
 }
