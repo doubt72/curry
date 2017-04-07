@@ -77,11 +77,11 @@ Curry is strongly typed, but type is implicit.
 
 #### Scalar types:
 
-* **Atom**: `true`, `false`
-* **Integer**: 64-bit integer
-* **Float**: 64-bit IEEE blah blah.  Don't worry about it, it's got a dot in it.
-  Sorry European readers.
-* **String**: UTF-8 string; length primitive returns number of codepoints, not
+* **Atoms**: `true`, `false`
+* **Integers**: 64-bit integers
+* **Floats**: 64-bit IEEE blah blah.  Don't worry about it, it's got a dot in
+  it. Suck it...  Er, I mean, sorry European readers.
+* **Strings**: UTF-8 strings; length primitive returns number of codepoints, not
   bytes.  Double-quotes are used for literals.
 
 Literals examples: atom: `true`, int: `0`, float: `0.0`,
@@ -89,16 +89,16 @@ string: `"0"` (so far, so simple).
 
 #### Other types:
 
-* **List**: lists are collections of expressions of arbitrary types.  Internally
-  they're vectors, but they're manipulated as if they were S-expressions
-  (actually implementing S-expressions in Rust turned out to be way more trouble
-  than it was worth). I kinda got Lisp all over my language. Can't seem to get
-  the stains out.  It got everywhere except the places it's not.  Can contain
-  any types in any order.
-* **Function**: functions are a first-class type. Then again, there aren't any
+* **Lists**: lists are collections of expressions of arbitrary types.
+  Internally they're vectors, but they're manipulated as if they were
+  S-expressions (actually implementing S-expressions in Rust turned out to be
+  way more trouble than it was worth). I kinda got Lisp all over my language.
+  Can't seem to get the stains out.  It got everywhere except the places it's
+  not.  Can contain any types in any order.
+* **Functions**: functions are a first-class type. Then again, there aren't any
   other kinds of types, so they're just a type, I guess.  Functions take a
   single argument (which must be a list).
-* **Exception**: used for flow control, since the language is an iterative
+* **Exceptions**: used for flow control, since the language is an iterative
   functional language (um), the only flow is the sequence of expressions in a
   block, and the only flow control is the exception, which terminates the block
   (or the program) if uncaught. Return is a special type of exception that that
@@ -109,8 +109,8 @@ to do control flow in a language before, but then, I don't actually know all
 that much about language design, so I wouldn't, would I.  My lack of knowledge
 may also explain the deep inner "beauty" of this language.
 
-Anyway, here's a literal example of list: `[1 2 3]`.  There aren't any literals
-of exceptions, and an anonymous identity function could look like this (it's not
+Anyway, here's a literal example of list: `[1 2 3]`.  There aren't any literal
+exceptions, and an anonymous identity function could look like this (it's not
 *exactly* an identity function, though, because well, reasons.  Identity
 functions aren't exactly...  Well, you can only pass lists, so...  But this
 *looks* like an identity function, oh, never mind, this is an anonymous
@@ -130,9 +130,10 @@ Calls are any id (i.e., something that wouldn't be parsed as a literal atom,
 number, string, etc.), optionally followed by a list (careful though: if the
 next element in a list after a function call is another list, use an explicit
 empty list to avoid having it passed as an argument, e.g.: `[foo[] []]` is a
-function call with no arguments and another empty list, but `[foo []]` would be
-parsed as a single function call; the whitespace is completely ignored).  If no
-list is specified, an empty list (`[]`) is passed.
+list containing both a function call with no arguments and another empty list,
+but `[foo []]` would be parsed as a single function call; the whitespace is not
+significant and will not prevent that).  If no list is specified, an empty list (`[]`)
+is passed, e.g., `[foo]`.
 
 Definitions are just a normal expression, and can be found anywhere including
 inside other function definitions (in which case they are scoped to the
@@ -146,24 +147,25 @@ includes the main program, which is just another block).
 
 There are no variables, only defined functions and `_` which is the list
 (parameter) passed to the function.  The parameter of the parent function is
-stored in `__`, and so forth and so on to the main block (where it's an empty
+stored in `__` and so forth and so on to the main block (where it's an empty
 list).
 
 Definitions are immutable!  Except inside a block they'll hide any definitions
 from the enclosing scope(s) calling the block/function.  Blocks aren't really
-closures in any sense, the context/scope of a function isn't stored when a function
-is defined, it's dynamically generated at runtime.
+closures in any sense, the context/scope of a function is not preserved when a
+function is defined, it's dynamically generated at runtime.
 
-#### Differences from doubtful
+#### Differences from Doubtful:
 
-The main difference is that I got rid of parameters.  All functions now take a
-single parameter (a list).  If nothing is passed, calls implicitly pass an empty
-list.  I also got rid of nil; an empty list (`[]`) is now used for the same
-thing (it only really matters for list operations anyway).  That means no more
-parenthesis.  It also means that lists more or less behave like S-expressions
-now as well (or at least the system functions manipulate them that way a bit
-more consistently), although internally they're still just vectors, because
-optional recursive data functions are a pain in Rust.
+The main difference is that I got rid of multiple parameters.  All functions now
+take a single parameter (a list).  If nothing is passed, calls implicitly pass
+an empty list.  I also got rid of nil; an empty list (`[]`) is now used for the
+same thing (it only really matters for list operations anyway).  That means no
+more parentheses (or at least they no longer have any special meaning).  It also
+means that lists more or less behave like S-expressions now as well (or at least
+the system functions manipulate them do a bit more consistently). Internally
+they're still just vectors, because optional recursive data functions are a pain
+in Rust.
 
 Yes, this makes the language a lot more Scheme-like, I'm glad you noticed.  It
 also _radically_ simplifies parsing and evaluation.

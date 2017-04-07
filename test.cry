@@ -92,7 +92,7 @@ test_05::car[_];;;
 assert[,[test_05[] [1]] 1 "call of anonymous function with parameter works"];
 
 # TODO: doesn't work yet; parse is either eating an extra token or not enough,
-# only a problem inside lists
+# only a problem inside lists, works okay if last argument
 #assert[,[:car[_]; [1]] 1 "call of inline anonymous function with parameter works"];
 
 assert_error[,[] "parameter length" "argument error for ,"];
@@ -112,7 +112,8 @@ assert[string[1.1] "1.1" "float to string conversion"];
 assert[string[false] "false" "atom to string conversion"];
 assert[string[[1 true 1.1]] "[1 true 1.1]" "list to string conversion"];
 
-# Yeah this is kind of crazy but it works:
+# Yeah this is kind of crazy but it works, not sure I don't want extra semicolon
+# here (see above):
 assert[string[:+[1 2];] ":<...>" "function to string conversion"];
 
 assert_error[int["1" "2"] "parameter length" "argument error for int"];
@@ -131,30 +132,30 @@ test_06:~[1];2;;
 assert[test_06 1 "~ terminates function returning value"];
 
 assert[catch[raise["error"]] ["error" "error" nil]
- "can catch raised exception"];
+  "can catch raised exception"];
 assert[catch[~[nil]] ["return" nil nil] "can catch return exception"];
 assert[catch[nil] ["ok" nil] "can catch non-exception"];
 
 test_07:raise["error"];;
 assert[catch[test_07] ["error" "error" ["test_07"]]
- "catch gets call stack"];
+  "catch gets call stack"];
 
 test_08:test_07;;
 assert[catch[test_08] ["error" "error" ["test_07" "test_08"]]
- "catch gets nested call stack"];
+  "catch gets nested call stack"];
 
 assert[catch[+[-[raise["error"] 1] 1]] ["error" "error" nil]
- "exception passes through functions"];
+  "exception passes through functions"];
 assert[catch[string[raise["error"]]] ["error" "error" nil]
- "exception passes through string can't simply change type"];
+  "exception passes through string can't simply change type"];
 assert[catch[?[raise["error"] true false]] ["error" "error" nil]
- "exception passes through ?"];
+  "exception passes through ?"];
 assert[catch[?[true raise["error"] false]] ["error" "error" nil]
- "exception passes through ? when returned"];
+  "exception passes through ? when returned"];
 assert[?[false raise["error"] false] false
- "exception doesn't pass through ? when not returned"];
+  "exception doesn't pass through ? when not returned"];
 assert[?[true true raise["error"]] true
- "exception doesn't pass through ? when not returned"];
+  "exception doesn't pass through ? when not returned"];
 
 # TODO: undefined function
 # TODO: redefined function
@@ -215,9 +216,8 @@ assert[^[false false] false "false xor false is false"];
 ### Appending things:
 
 assert[+["hello " "world"] "hello world" "appending to a string"];
-assert[+[[0 1] 2] [0 1 2] "appending to a list"];
 assert[+[[1 true] [nil 2.0]] [1 true nil 2.0]
- "appending a list to a list"];
+  "appending a list to a list"];
 
 # TODO: type errors
 
