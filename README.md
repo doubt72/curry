@@ -127,8 +127,12 @@ Expressions in a block must be terminated with a semicolon (`;`); inside a list
 they're terminated by whitespace or the end of the list.
 
 Calls are any id (i.e., something that wouldn't be parsed as a literal atom,
-number, string, etc.), optionally followed by a list.  If no list is specified,
-an empty list (`[]`) is passed.
+number, string, etc.), optionally followed by a list (careful though: if the
+next element in a list after a function call is another list, use an explicit
+empty list to avoid having it passed as an argument, e.g.: `[foo[] []]` is a
+function call with no arguments and another empty list, but `[foo []]` would be
+parsed as a single function call; the whitespace is completely ignored).  If no
+list is specified, an empty list (`[]`) is passed.
 
 Definitions are just a normal expression, and can be found anywhere including
 inside other function definitions (in which case they are scoped to the

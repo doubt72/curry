@@ -6,91 +6,72 @@ $:list:car[__];;n:car[cdr[__]];;
   ?[=[n 0] ~[car[list]] nil];
   $[cdr[list] -[n 1]];;
 
->>[string[nil]];
+$0:$[__ 0];;
+$1:$[__ 1];;
+$2:$[__ 2];;
 
-!=:![=[$[_ 0] $[_ 1]]];;
+$_0:$[___ 0];;
+$_1:$[___ 1];;
+$_2:$[___ 2];;
 
-^:?[$[_ 0] ![$[_ 1]] $[_ 1]];;
+!=:![=[$0 $1]];;
 
->=:|[>[$[_ 0] $[_ 1]] =[$[_ 0] $[_ 1]]];;
-<=:|[<[$[_ 0] $[_ 1]] =[$[_ 0] $[_ 1]]];;
+^:?[$0 ![$1] $1];;
+
+>=:|[>[$0 $1] =[$0 $1]];;
+<=:|[<[$0 $1] =[$0 $1]];;
 
 # This sort of recursion doesn't terminate because ? is regular function so
 # pow always gets evaluated before being passed and results in infinite
 # unterminated recursion [i.e. don't do this]:
-# pow:?[=[$[_ 1] 0] 1 *[$[_ 0] pow[a -[$[_ 1] 1]]]];;
+# pow:?[=[$1 0] 1 *[$0 pow[a -[$1 1]]]];;
 
 # Do this instead [i.e. use ~ in a previous statement]:
-pow:?[=[$[_ 1] 0] ~[1] nil];*[$[_ 0] pow[$[_ 0] -[$[_ 1] 1]]];;
+pow:?[=[$1 0] ~[1] nil];*[$0 pow[$0 -[$1 1]]];;
 
-len:list:$[__ 1];;?[=[list nil] ~[0] nil];+[1 len[cdr[list]]];;
+len:list:$_0;;?[=[list nil] ~[0] nil];+[1 len[cdr[list]]];;
 
-# Naive implementation that explodes on list shorter than n [for example]
-truncate:
-  list:$[__ 0];;
-  n:$[__ 1];;
-  ?[=[n len[list]] ~[[]] nil];
+truncate:list:$_0;;n:$_1;;
+  ?[=[n len[list]] ~[nil] nil];
   +[[car[list]] truncate[cdr[list] n]];;
 
-# Also naive
-cd...dr:
-  list:$[__ 0];;
-  n:$[__ 1];;
+cd..dr:list:$_0;;n:$_1;;
   ?[=[n 0] ~[list] nil];
-  cd...dr[cdr[list] -[n 1]];;
+  cd..dr[cdr[list] -[n 1]];;
 
-# Also naive no range checking
-sub:
-  list:$[__ 0];;
-  start:$[__ 1];;
-  range:$[__ 1];;
-  truncate[cd...dr[list start] -[-[len[list] start] range]];;
+sub:list:$_0;;start:$_1;;range:$_2;;
+  truncate[cd..dr[list start] -[-[len[list] start] range]];;
 
-@:list:$[__ 0];;func:$[__ 1];;
-  ?[=[cdr[list] nil] ~[[,[func car[list]]]] nil];
-  +[[,[func car[list]]] @[cdr[list],func]];;
+@:list:$_0;;func:$_1;;
+  ?[=[cdr[list] nil] ~[[,[func[] [car[list]]]]] nil];
+  +[[,[func[] [car[list]]]] @[cdr[list] func]];;
 
-.:n:$[_. 0];;m:$[_. 1];;
+.:n:$_0;;m:$_1;;
   ?[=[n m] ~[[m]] nil];
   +[[n] .[+[n 1] m]];;
 
 ### Our testing harness:
 
-succeed:msg:$[__ 0];;
- +["+ : " msg];;
+succeed:msg:$_0;;
+  +["+ : " msg];;
 
 # Look at these literal newlines:
 fail:
-  a:$[__ 0];;
-  b:$[__ 1];;
-  msg:$[__ 1];;
-  l1:+["- : " msg];;
-  l2:+["
-  : expected : " string[b]];;
-  l3:+["
-  : got   : " string[a]];;
-  +[l1 +[l2 l3]];;
+  a:$_0;;b:$_1;;msg:$_2;;
+  +[+[+[+[+["- : " msg] "
+  : expected : "] string[b]] "
+  :      got : "] string[a]];;
 
 assert:
-  a:$[__ 0];;
-  b:$[__ 1];;
-  msg:$[__ 1];;
-  out:?[=[a b] succeed[msg] fail[a b msg]];;
-  >>[out];
-  =[a b];;
+  a:$_0;;b:$_1;;msg:$_2;;
+  >>[?[=[a b] succeed[msg] fail[a b msg]]];;
 
 assert!:
-  a:$[__ 0];;
-  b:$[__ 1];;
-  msg:$[__ 1];;
-  out:?[!=[a b] succeed[msg] fail[a b msg]];;
-  >>[out];
-  !=[a b];;
+  a:$_0;;b:$_1;;msg:$_2;;
+  >>[?[!=[a b] succeed[msg] fail[a b msg]]];;
 
 assert_error:
-  a:$[__ 0];;
-  b:$[__ 1];;
-  msg:$[__ 1];;
+  a:$_0;;b:$_1;;msg:$_2;;
   assert[car[catch[a]] b msg];;
 
 assert[1 1 "one equals one"];
@@ -98,27 +79,25 @@ assert![1 0 "one does not equal zero"];
 
 ### Functions:
 
-test_00:[car _];;
-test_01:test_00[car _];;
+test_00:car[_];;
+test_01:test_00[car[_]];;
 assert[test_01[1] 1 "chained functions work"];
 
-test_02:test_03:[car _];;test_03[car _];;
+test_02:test_03:car[_];;test_03[car[_]];;
 assert[test_02[1] 1 "inner functions work"];
 
 ### Anonymous functions:
 
-# TODO: this is not going to work
-test_04::car[_];;;
-assert[,[test_04[1]] 1 "call of function that returns function works"];
-
 test_05::car[_];;;
-assert[,[test_05 [1]] 1 "call of anonymous function with parameter works"];
+assert[,[test_05[] [1]] 1 "call of anonymous function with parameter works"];
 
-#assert[,[:car[_];; [1]] 1 "call of inline anonymous function with parameter works"];
+# TODO: doesn't work yet; parse is either eating an extra token or not enough,
+# only a problem inside lists
+#assert[,[:car[_]; [1]] 1 "call of inline anonymous function with parameter works"];
 
-assert_error[,[] "arity error" "arity error for ,"];
-assert_error[,[test_05] "arity error" "arity error for function in ,"];
-assert_error[,[nil] "type error" "type error for ,"];
+assert_error[,[] "parameter length" "argument error for ,"];
+assert_error[,[test_05] "parameter length" "argument error for function in ,"];
+assert_error[,[nil nil] "type error" "type error for ,"];
 
 ### Types:
 
@@ -131,30 +110,29 @@ assert[float["1.1"] 1.1 "string to float conversion"];
 assert[string[1] "1" "int to string conversion"];
 assert[string[1.1] "1.1" "float to string conversion"];
 assert[string[false] "false" "atom to string conversion"];
-assert[string[[1 nil 1.1]] "[1 nil 1.1]" "list to string conversion"];
+assert[string[[1 true 1.1]] "[1 true 1.1]" "list to string conversion"];
 
 # Yeah this is kind of crazy but it works:
-assert[string[[a b]:+[a b];] "[a b]:<...>"
- "function to string conversion"];
+assert[string[:+[1 2];] ":<...>" "function to string conversion"];
 
-assert_error[int["1" "2"] "arity error" "arity error for int"];
+assert_error[int["1" "2"] "parameter length" "argument error for int"];
 assert_error[int["z"] "parse error" "unparseable string for int"];
 assert_error[int[nil] "type error" "type error for int"];
 
-assert_error[float["1" "2"] "arity error" "arity error for float"];
+assert_error[float["1" "2"] "parameter length" "argument error for float"];
 assert_error[float["z"] "parse error" "unparseable string for float"];
 assert_error[float[nil] "type error" "type error for float"];
 
-assert_error[string["1" "2"] "arity error" "arity error for string"];
+assert_error[string["1" "2"] "parameter length" "argument error for string"];
 
 ### Exceptions:
 
 test_06:~[1];2;;
 assert[test_06 1 "~ terminates function returning value"];
 
-assert[catch[raise["error"]] ["error" "error" []]
+assert[catch[raise["error"]] ["error" "error" nil]
  "can catch raised exception"];
-assert[catch[~[nil]] ["return" nil []] "can catch return exception"];
+assert[catch[~[nil]] ["return" nil nil] "can catch return exception"];
 assert[catch[nil] ["ok" nil] "can catch non-exception"];
 
 test_07:raise["error"];;
@@ -165,13 +143,13 @@ test_08:test_07;;
 assert[catch[test_08] ["error" "error" ["test_07" "test_08"]]
  "catch gets nested call stack"];
 
-assert[catch[+[-[raise["error"] 1] 1]] ["error" "error" []]
+assert[catch[+[-[raise["error"] 1] 1]] ["error" "error" nil]
  "exception passes through functions"];
-assert[catch[string[raise["error"]]] ["error" "error" []]
+assert[catch[string[raise["error"]]] ["error" "error" nil]
  "exception passes through string can't simply change type"];
-assert[catch[?[raise["error"] true false]] ["error" "error" []]
+assert[catch[?[raise["error"] true false]] ["error" "error" nil]
  "exception passes through ?"];
-assert[catch[?[true raise["error"] false]] ["error" "error" []]
+assert[catch[?[true raise["error"] false]] ["error" "error" nil]
  "exception passes through ? when returned"];
 assert[?[false raise["error"] false] false
  "exception doesn't pass through ? when not returned"];
